@@ -1,5 +1,5 @@
 import {TAG_ROOT} from "./constant";
-import {scheduleRoot} from "./schedule"
+import {scheduleRoot} from "./scheduler"
 
 /**
  * 渲染一个VDom到容器

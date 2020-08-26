@@ -7,6 +7,8 @@ export const TAG_ROOT = Symbol.for("TAG_ROOT");
 export const TAG_HOST = Symbol.for("TAG_HOST");
 /*文本节点*/
 export const TAG_TEXT = Symbol.for("TAG_TEXT");
+/*Class组件节点*/
+export const TAG_CLASS = Symbol.for("TAG_CLASS");
 
 /*effect*/
 export const PLACEMENT = Symbol.for("PLACEMENT");

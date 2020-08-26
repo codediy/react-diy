@@ -1,4 +1,6 @@
 import {ELEMENT_TEXT} from "./constant";
+import {Update} from "./UpdateQueue";
+import {scheduleRoot} from "./scheduler"
 
 function createElement(type, props, ...children) {
     delete props.__self;
@@ -18,8 +20,29 @@ function createElement(type, props, ...children) {
     }
 }
 
+
+/*Class组件*/
+class Component {
+    constructor(props) {
+        this.props = props;
+    }
+
+    /*更新操作*/
+    setState(payload) {
+        /*添加更新到更新队列*/
+        let update = new Update(payload);
+        this.internalFiber.updateQueue.enqueueUpdate(update);
+        /*调度执行*/
+        scheduleRoot();
+    }
+}
+
+/*Class组件标志*/
+Component._isComponent = {};
+
 const React = {
-    createElement
+    createElement,
+    Component
 }
 
 export default React;

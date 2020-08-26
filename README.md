@@ -47,4 +47,20 @@
     - 检测currentRoot.alternate是否存在，
     - 如果存在说明已经进行过一次更新，直接复用旧的workInProgressRoot
     - 旧的workInProgressRoot存在currentRoot.alternate上
-    
+
+## ClassComponent分支
+[ClassComponent实现](https://github.com/codediy/react-diy/tree/class-component)
+
+## ClassComponent流程
+### mount阶段
+- performUnitOfWork()
+    - 生成根节点fiber的Fiber树，
+    - 根节点处理过程tag=TAG_CLASS
+    - beginWork()中TAG_CLASS的调用updateClassComponent
+ 
+### update阶段
+- updateClassComponent
+    - 生成组件实例
+    - 更新队列操作
+    - render()重新生成vDOM
+    - reconcileChildren处理vDOM
