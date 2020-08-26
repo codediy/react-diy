@@ -64,3 +64,15 @@
     - 更新队列操作
     - render()重新生成vDOM
     - reconcileChildren处理vDOM
+
+## FunctionComponent分支
+[FunctionComponent实现](https://github.com/codediy/react-diy/tree/function-component)
+
+## FunctionComponent流程
+
+- updateFunctionComponent
+    - 初始化fiber.hooks = [];
+- useReducer
+    - 挂载hooks到fiber.hooks 
+- dispatch
+    - 调度UpdateQueue

@@ -19,7 +19,7 @@ export class UpdateQueue {
             this.lastUpdate.nextUpdate = update;
             this.lastUpdate = update;
         }
-        console.log("Queue", update, this.firstUpdate, this.lastUpdate);
+        console.log("Queue11", update, this.firstUpdate, this.lastUpdate);
     }
 
     forceUpdate(state) {
@@ -27,7 +27,9 @@ export class UpdateQueue {
         while (currentUpdate) {
             let nextState = typeof  currentUpdate.payload === "function"
                 ? currentUpdate.payload(state)
-                : currentUpdate;
+                : currentUpdate.payload;
+
+            console.log("nextState", nextState);
             state = {...state, ...nextState};
 
             currentUpdate = currentUpdate.nextUpdate;

@@ -1,6 +1,6 @@
 import {ELEMENT_TEXT} from "./constant";
 import {Update} from "./UpdateQueue";
-import {scheduleRoot} from "./scheduler"
+import {scheduleRoot, useReducer, useState} from "./scheduler"
 
 function createElement(type, props, ...children) {
     delete props.__self;
@@ -40,9 +40,16 @@ class Component {
 /*Class组件标志*/
 Component._isComponent = {};
 
+/*函数式更新*/
+
+
 const React = {
     createElement,
-    Component
-}
+
+    Component,
+
+    useReducer,
+    useState
+};
 
 export default React;

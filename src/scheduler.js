@@ -1,7 +1,17 @@
 /*待处理单元*/
-import {DELETION, ELEMENT_TEXT, PLACEMENT, TAG_CLASS, TAG_HOST, TAG_ROOT, TAG_TEXT, UPDATE} from "./constant";
+import {
+    DELETION,
+    ELEMENT_TEXT,
+    PLACEMENT,
+    TAG_CLASS,
+    TAG_FUNCTION,
+    TAG_HOST,
+    TAG_ROOT,
+    TAG_TEXT,
+    UPDATE
+} from "./constant";
 import {createDOM, updateDOM} from "./utills"
-import {UpdateQueue} from "./UpdateQueue";
+import {UpdateQueue, Update} from "./UpdateQueue";
 
 let nextUnitOfWork = null;
 /*正在生成的渲染的树*/
@@ -10,6 +20,10 @@ let workInProgressRoot = null;
 let currentRoot = null;
 /*待删除的节点数组*/
 let deletions = [];
+
+/*hook变量*/
+let workInProgressFiber = null;
+let hookIndex = 0;
 
 /**
  * 从rootFiber开始渲染
@@ -108,6 +122,9 @@ function beginWork(currentFiber) {
     } else if (currentFiber.tag === TAG_CLASS) {
         /*Class组件节点*/
         updateClassComponent(currentFiber)
+    } else if (currentFiber.tag === TAG_FUNCTION) {
+        /*Function组件节点*/
+        updateFunctionComponent(currentFiber);
     }
 }
 
@@ -144,6 +161,10 @@ function updateHostText(currentFiber) {
     }
 }
 
+/**
+ * Class组件
+ * @param currentFiber
+ */
 function updateClassComponent(currentFiber) {
     if (!currentFiber.stateNode) { /*实例化*/
         /*类组件stateNode为组件的实例*/
@@ -154,12 +175,27 @@ function updateClassComponent(currentFiber) {
         /*更新队列*/
         currentFiber.updateQueue = new UpdateQueue();
     }
-
     /*组件实例的更新操作*/
     currentFiber.stateNode.state = currentFiber.updateQueue.forceUpdate(currentFiber.stateNode.state);
     /*重新渲染ClassComponent*/
     let newElement = currentFiber.stateNode.render();
     const newChildren = [newElement];
+    /*子节点处理*/
+    reconcileChildren(currentFiber, newChildren);
+}
+
+/**
+ * 函数式组件更新
+ * @param currentFiber
+ */
+function updateFunctionComponent(currentFiber) {
+    /*当前Fiber的hook存储*/
+    workInProgressFiber = currentFiber;
+    hookIndex = 0;
+    workInProgressFiber.hooks = [];
+
+    /*生成子节点*/
+    let newChildren = [currentFiber.type(currentFiber.props)];
     /*子节点处理*/
     reconcileChildren(currentFiber, newChildren);
 }
@@ -185,11 +221,15 @@ function reconcileChildren(currentFiber, newChildren) {
         let newFiber;
 
         let tag;
-        if (newChild &&
-            typeof newChild.type === "function"
+        if (newChild
+            && typeof newChild.type === "function"
             && newChild.type._isComponent) {
             /*Class组件*/
             tag = TAG_CLASS;
+        } else if (newChild
+            && typeof newChild.type === "function") {
+            /*Class组件*/
+            tag = TAG_FUNCTION;
         } else if (newChild
             && typeof  newChild.type === "string") {
             /*普通元素节点*/
@@ -395,9 +435,52 @@ function commitDeletion(currentFiber, domReturn) {
 }
 
 
+/**
+ * useXX基础
+ * @param reducer
+ * @param initialValue
+ */
+export function useReducer(reducer, initialValue) {
+    let oldHook = workInProgressFiber.alternate
+        && workInProgressFiber.alternate.hooks
+        && workInProgressFiber.alternate.hooks[hookIndex];
 
+    let newHook;
+    if (oldHook) {
+        /*读取旧的计算后的状态*/
+        oldHook.state = oldHook.updateQueue.forceUpdate(oldHook.state);
+        newHook = oldHook;
+    } else {
+        newHook = {
+            state: initialValue,
+            updateQueue: new UpdateQueue()
+        }
+    }
 
+    console.log("hook1", newHook);
+    const dispatch = action => {
+        let payload = reducer
+            ? reducer(newHook.state, action)
+            : action;
 
+        newHook.updateQueue.enqueueUpdate(
+            new Update(payload)
+        );
+        console.log("dispatch", newHook);
+        /*每次更新都开始调度*/
+        scheduleRoot();
+    };
+
+    /*记录hook*/
+    workInProgressFiber.hooks[hookIndex] = newHook;
+    hookIndex = hookIndex + 1;
+    /*state,dispatch*/
+    return [newHook.state, dispatch];
+}
+
+export function useState(initialValue) {
+    return useReducer(null, initialValue);
+}
 
 
 
