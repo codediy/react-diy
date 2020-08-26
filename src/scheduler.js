@@ -1,4 +1,3 @@
-/*待处理单元*/
 import {
     DELETION,
     ELEMENT_TEXT,
@@ -13,6 +12,7 @@ import {
 import {createDOM, updateDOM} from "./utills"
 import {UpdateQueue, Update} from "./UpdateQueue";
 
+/*待处理单元*/
 let nextUnitOfWork = null;
 /*正在生成的渲染的树*/
 let workInProgressRoot = null;
@@ -195,7 +195,7 @@ function updateFunctionComponent(currentFiber) {
     workInProgressFiber.hooks = [];
 
     /*生成子节点*/
-    let newChildren = [currentFiber.type(currentFiber.props)];
+    const newChildren = [currentFiber.type(currentFiber.props)];
     /*子节点处理*/
     reconcileChildren(currentFiber, newChildren);
 }
@@ -311,7 +311,7 @@ function reconcileChildren(currentFiber, newChildren) {
         }
 
         if (newFiber) {
-            if (newChildIndex == 0) {
+            if (newChildIndex === 0) {
                 /*父节点指向第一个子节点*/
                 currentFiber.child = newFiber;
             } else {
@@ -387,18 +387,18 @@ function commitWork(currentFiber) {
     && returnFiber.tag !== TAG_ROOT) {
         returnFiber = returnFiber.return;
     }
-
     let domReturn = returnFiber.stateNode;
+
     /*effect对应处理*/
     if (currentFiber.effectTag === PLACEMENT) {
         /*新加节点*/
         /*Class组件包含的非类组件，针对嵌套的Class组件*/
         let nextFiber = currentFiber;
-
         while (nextFiber.tag !== TAG_HOST
         && nextFiber.tag !== TAG_TEXT) {
             nextFiber = currentFiber.child;
         }
+
         domReturn.appendChild(nextFiber.stateNode);
     } else if (currentFiber.effectTag === DELETION) {
         /*删除节点*/
@@ -411,8 +411,9 @@ function commitWork(currentFiber) {
                 currentFiber.stateNode.textContent = currentFiber.props.text;
             }
         } else {
-            if (currentFiber.type === TAG_CLASS) {
-                return currentFiber.effectTag = null;
+            if (currentFiber.type === TAG_CLASS || currentFiber.type === TAG_FUNCTION) {
+                currentFiber.effectTag = null;
+                return;
             }
             updateDOM(
                 currentFiber.stateNode,
