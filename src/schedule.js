@@ -15,14 +15,23 @@ let deletions = [];
  * @param rootFiber
  */
 export function scheduleRoot(rootFiber) {
-    /*更新检查*/
-    if (currentRoot) { /*已mount过的update*/
+    if (currentRoot && currentRoot.alternate) {
+        /*已mount过的第二次及以后的更新*/
+        /*使用workInProgressRoot的stateNode*/
+        workInProgressRoot = currentRoot.alternate;
+        workInProgressRoot.props = rootFiber.props;
+        workInProgressRoot.alternate = currentRoot
+    } else if (currentRoot) {
+        /*已mount过的首次update*/
         rootFiber.alternate = currentRoot;
         workInProgressRoot = rootFiber;
-    } else { /*mount过程*/
+    } else {
+        /*mount过程*/
         workInProgressRoot = rootFiber;
     }
-
+    workInProgressRoot.firstEffect = null;
+    workInProgressRoot.lastEffect = null;
+    workInProgressRoot.nextEffect = null;
     nextUnitOfWork = rootFiber;
 }
 

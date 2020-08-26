@@ -26,4 +26,25 @@
 - [sampleUpdate实现](https://github.com/codediy/react-diy/tree/sample-update)
 
 ## sampleUpdate流程
+- scheduleRoot() 
+    - 检测currentRoot是否存在，如果存在则是更新流程
+- commitRoot()
+    - 记录workInProgressRoot到currentRoot作为已渲染的缓存
+-  reconcileChildren
+    - oldFiler与newChild的比较
+    - type相同则复用，type不同则删除重建
+    - 这里关联newFiber.alternative到oldFiber
+- commitWork()
+    - PLACEMENT,DELETION,UPDATE等effectTag的处理
+- setProps()
+    - oldProps与newProps的处理
 
+## doubleBuffer分支
+[doubleBuffer实现](https://github.com/codediy/react-diy/tree/double-buffer)
+
+## doubleBuffer流程
+- scheduleRoot() 
+    - 检测currentRoot.alternate是否存在，
+    - 如果存在说明已经进行过一次更新，直接复用旧的workInProgressRoot
+    - 旧的workInProgressRoot存在currentRoot.alternate上
+    
