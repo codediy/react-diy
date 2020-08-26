@@ -29,12 +29,23 @@ export function updateDOM(stateNode, oldProps, newProps) {
 
 export function setProps(dom, oldProps, newProps) {
     for (let key in oldProps) {
-
+        if (key !== "children") {
+            if (newProps.hasOwnProperty(key)) {
+                /*更新属性*/
+                setProp(dom, key, newProps[key]);
+            } else {
+                /*删除属性*/
+                dom.removeAttribute(key);
+            }
+        }
     }
 
     for (let key in newProps) {
         if (key !== "children") {
-            setProp(dom, key, newProps[key]);
+            if (!oldProps.hasOwnProperty(key)) {
+                /*添加属性*/
+                setProp(dom, key, newProps[key]);
+            }
         }
     }
 }

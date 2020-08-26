@@ -1,17 +1,28 @@
 /*待处理单元*/
-import {ELEMENT_TEXT, PLACEMENT, TAG_HOST, TAG_ROOT, TAG_TEXT} from "./constant";
-import {createDOM} from "./utills"
+import {DELETION, ELEMENT_TEXT, PLACEMENT, TAG_HOST, TAG_ROOT, TAG_TEXT, UPDATE} from "./constant";
+import {createDOM, updateDOM} from "./utills"
 
 let nextUnitOfWork = null;
-/*根节点*/
+/*正在生成的渲染的树*/
 let workInProgressRoot = null;
+/*当前渲染的树*/
+let currentRoot = null;
+/*待删除的节点数组*/
+let deletions = [];
 
 /**
  * 从rootFiber开始渲染
  * @param rootFiber
  */
 export function scheduleRoot(rootFiber) {
-    workInProgressRoot = rootFiber;
+    /*更新检查*/
+    if (currentRoot) { /*已mount过的update*/
+        rootFiber.alternate = currentRoot;
+        workInProgressRoot = rootFiber;
+    } else { /*mount过程*/
+        workInProgressRoot = rootFiber;
+    }
+
     nextUnitOfWork = rootFiber;
 }
 
@@ -117,37 +128,72 @@ function updateHostText(currentFiber) {
  */
 function reconcileChildren(currentFiber, newChildren) {
     let newChildIndex = 0;
+    /*旧的子节点数组*/
+    let oldFiber = currentFiber.alternate && currentFiber.alternate.child;
     /*上一个新的子fiber*/
     let prevSibling;
 
     /*生成Fiber树*/
-    while (newChildIndex < newChildren.length) {
+    while (newChildIndex < newChildren.length || oldFiber) {
         let newChild = newChildren[newChildIndex];
-        let tag;
+        let newFiber;
 
-        if (newChild.type == ELEMENT_TEXT) {
+        let tag;
+        if (newChild && newChild.type == ELEMENT_TEXT) {
             /*文本节点*/
             tag = TAG_TEXT;
-        } else if (typeof  newChild.type === "string") {
+        } else if (newChild && typeof  newChild.type === "string") {
             /*普通元素节点*/
             tag = TAG_HOST;
         }
 
-        let newFiber = {
-            tag,
-            type: newChild.type,
-            props: newChild.props,
-            stateNode: null, /*beginWork处理生成*/
+        const sameType = oldFiber && newChild && oldFiber.type == newChild.type;
+        if (sameType) {
+            /*新旧节点type相同 复用旧的DOM节点*/
+            newFiber = {
+                tag: oldFiber.tag,
+                type: oldFiber.type,
+                props: newChild.props,
+                stateNode: oldFiber.stateNode, /*beginWork处理生成*/
+                return: currentFiber, /*父节点*/
+                child: null, /*子节点reconcileChildren生成*/
+                sibling: null, /*兄弟节点*/
+                alternate: oldFiber,
+                effectTag: UPDATE, /*effectTag*/
+                firstEffect: null, /*上一个 completeUnitOfWork生成*/
+                lastEffect: null, /*最后一个*/
+                nextEffect: null, /*下一个effect*/
+            }
+        } else {
+            if (newChild) {
+                /*新旧节点type不同*/
+                newFiber = {
+                    tag,
+                    type: newChild.type,
+                    props: newChild.props,
+                    stateNode: null, /*beginWork处理生成*/
 
-            return: currentFiber, /*父节点*/
-            child: null, /*子节点reconcileChildren生成*/
-            sibling: null, /*兄弟节点*/
+                    return: currentFiber, /*父节点*/
+                    child: null, /*子节点reconcileChildren生成*/
+                    sibling: null, /*兄弟节点*/
 
-            effectTag: PLACEMENT, /*effectTag*/
-            firstEffect: null, /*上一个 completeUnitOfWork生成*/
-            lastEffect: null, /*最后一个*/
-            nextEffect: null, /*下一个effect*/
-        };
+                    effectTag: PLACEMENT, /*effectTag*/
+                    firstEffect: null, /*上一个 completeUnitOfWork生成*/
+                    lastEffect: null, /*最后一个*/
+                    nextEffect: null, /*下一个effect*/
+                };
+            }
+
+            if (oldFiber) {
+                /*旧的处理*/
+                oldFiber.effectTag = DELETION;
+                deletions.push(oldFiber);
+            }
+        }
+
+        if (oldFiber) {
+            oldFiber = oldFiber.sibling;
+        }
 
         if (newFiber) {
             if (newChildIndex == 0) {
@@ -160,6 +206,7 @@ function reconcileChildren(currentFiber, newChildren) {
             /*缓存上一个兄弟节点*/
             prevSibling = newFiber;
         }
+
         newChildIndex = newChildIndex + 1;
     }
 }
@@ -199,23 +246,52 @@ function completeUnitOfWork(currentFiber) {
 }
 
 function commitRoot() {
+    /*待删除元素处理*/
+    deletions.forEach(commitWork);
+
     let currentFiber = workInProgressRoot.firstEffect;
     while (currentFiber) {
         console.log("commitRoot", currentFiber);
         commitWork(currentFiber);
         currentFiber = currentFiber.nextEffect;
     }
+    /*删除数组清空*/
+    deletions.length = 0;
+    /*记录已渲染的*/
+    currentRoot = workInProgressRoot;
+    /*清除已渲染的*/
     workInProgressRoot = null;
 }
 
 function commitWork(currentFiber) {
     if (!currentFiber) return;
+    /*获取父元素*/
     let returnFiber = currentFiber.return;
-    let returnDOM = returnFiber.stateNode;
+    let domReturn = returnFiber.stateNode;
 
+    /*effect对应处理*/
     if (currentFiber.effectTag === PLACEMENT) {
-        returnDOM.appendChild(currentFiber.stateNode);
+        /*新加节点*/
+        domReturn.appendChild(currentFiber.stateNode);
+    } else if (currentFiber.effectTag === DELETION) {
+        /*删除节点*/
+        domReturn.removeChild(currentFiber.stateNode);
+    } else if (currentFiber.effectTag === UPDATE) {
+        /*更新节点*/
+        if (currentFiber.type === ELEMENT_TEXT) {
+            /*文本节点更新*/
+            if (currentFiber.alternate.props.text != currentFiber.props.text) {
+                currentFiber.stateNode.textContent = currentFiber.props.text;
+            }
+        } else {
+            updateDOM(
+                currentFiber.stateNode,
+                currentFiber.alternate.props,
+                currentFiber.props,
+            )
+        }
     }
+
     currentFiber.effectTag = null;
 }
 
